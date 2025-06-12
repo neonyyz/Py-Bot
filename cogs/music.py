@@ -90,7 +90,7 @@ class MusicControlView(discord.ui.View):
         super().__init__(timeout=None)
         self.cog = cog
 
-    @discord.ui.button(label="Play", style=discord.ButtonStyle.gray, custom_id="music_play", row=0)
+    @discord.ui.button(label="▶️", style=discord.ButtonStyle.gray, custom_id="music_play", row=0)
     async def play(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message(
             "How would you like to play music?",
@@ -98,23 +98,23 @@ class MusicControlView(discord.ui.View):
             ephemeral=True
         )
 
-    @discord.ui.button(label="Pause", style=discord.ButtonStyle.gray, custom_id="music_pause", row=0)
+    @discord.ui.button(label="⏸️", style=discord.ButtonStyle.gray, custom_id="music_pause", row=0)
     async def pause(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self.cog.pause.callback(self.cog, interaction)
 
-    @discord.ui.button(label="Resume", style=discord.ButtonStyle.gray, custom_id="music_resume", row=0)
+    @discord.ui.button(label="⏯️", style=discord.ButtonStyle.gray, custom_id="music_resume", row=0)
     async def resume(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self.cog.resume.callback(self.cog, interaction)
 
-    @discord.ui.button(label="Skip", style=discord.ButtonStyle.gray, custom_id="music_skip", row=0)
+    @discord.ui.button(label="⏭️", style=discord.ButtonStyle.gray, custom_id="music_skip", row=0)
     async def skip(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self.cog.skip.callback(self.cog, interaction)
 
-    @discord.ui.button(label="Queue", style=discord.ButtonStyle.gray, custom_id="music_queue", row=1)
+    @discord.ui.button(label="📜", style=discord.ButtonStyle.gray, custom_id="music_queue", row=1)
     async def queue(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self.cog.queue.callback(self.cog, interaction)
 
-    @discord.ui.button(label="Playlist", style=discord.ButtonStyle.gray, custom_id="music_playlist", row=1)
+    @discord.ui.button(label="🎵", style=discord.ButtonStyle.gray, custom_id="music_playlist", row=1)
     async def playlist(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message(
             "Playlist management:",
@@ -122,7 +122,7 @@ class MusicControlView(discord.ui.View):
             ephemeral=True
         )
 
-    @discord.ui.button(label="Loop", style=discord.ButtonStyle.gray, custom_id="music_loop", row=1)
+    @discord.ui.button(label="🔁", style=discord.ButtonStyle.gray, custom_id="music_loop", row=1)
     async def loop(self, interaction: discord.Interaction, button: discord.ui.Button):
         guild_id = str(interaction.guild.id)
         current = self.cog.loop_mode.get(guild_id, "off")
@@ -139,18 +139,18 @@ class MusicControlView(discord.ui.View):
         embed = Embed(title="Loop Mode", description=msg)
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
-    @discord.ui.button(label="Shuffle", style=discord.ButtonStyle.gray, custom_id="music_shuffle", row=1)
+    @discord.ui.button(label="🔀", style=discord.ButtonStyle.gray, custom_id="music_shuffle", row=1)
     async def shuffle(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self.cog.shuffle.callback(self.cog, interaction)
 
-    @discord.ui.button(label="Volume", style=discord.ButtonStyle.gray, custom_id="music_volume", row=2)
+    @discord.ui.button(label="🔊", style=discord.ButtonStyle.gray, custom_id="music_volume", row=2)
     async def volume(self, interaction: discord.Interaction, button: discord.ui.Button):
         voice_client = interaction.guild.voice_client
         guild_id = str(interaction.guild.id)
         current = int(GUILD_VOLUMES.get(guild_id, 0.5) * 100)
         await interaction.response.send_modal(VolumeModal(self.cog))
 
-    @discord.ui.button(label="Now Playing", style=discord.ButtonStyle.gray, custom_id="music_nowplaying", row=2)
+    @discord.ui.button(label="🎧", style=discord.ButtonStyle.gray, custom_id="music_nowplaying", row=2)
     async def nowplaying(self, interaction: discord.Interaction, button: discord.ui.Button):
         guild_id = str(interaction.guild.id)
         voice_client = interaction.guild.voice_client
@@ -174,6 +174,7 @@ class Music(commands.Cog):
         self.queue_task = {}
         self.music_channel_id, self.interface_message_id = load_interface_state()
         self.interface_task = None
+        self.queue_snapshots = {}  # <-- Add this line
 
     async def cog_load(self):
         self.bot.add_view(MusicControlView(self))
@@ -188,11 +189,11 @@ class Music(commands.Cog):
         if not channel:
             return
         embed = discord.Embed(
-            title="Ayanokoji Interface",
+            title="Ayanokōji Interface",
             description=(
-                "This interface can be used to manage or control the music player\n"
-                "- here i'll add a picture once i edit it, write picture here -\n"
-                "Press the buttons below to use the interface"
+                "This interface can be used to control the music player\n"
+                "\n"
+                "⚙️ Press the buttons below to use the interface"
             ),
             color=discord.Color.blurple()
         )
@@ -799,7 +800,11 @@ class Music(commands.Cog):
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
     async def play_next_song(self, voice_client, guild_id, channel):
-        queue_snapshot = list(SONG_QUEUES[guild_id]) if guild_id in SONG_QUEUES else []
+        # Save the snapshot if not already saved and queue is not empty
+        if guild_id not in self.queue_snapshots or not self.queue_snapshots[guild_id]:
+            if SONG_QUEUES.get(guild_id):
+                self.queue_snapshots[guild_id] = list(SONG_QUEUES[guild_id])
+        queue_snapshot = self.queue_snapshots.get(guild_id, [])
         if SONG_QUEUES[guild_id]:
             audio_url, title = SONG_QUEUES[guild_id].popleft()
             self.last_played[guild_id] = (audio_url, title)
@@ -812,7 +817,7 @@ class Music(commands.Cog):
                 discord.FFmpegPCMAudio(audio_url, **ffmpeg_options, executable="ffmpeg"),
                 volume=volume
             )
-            source.title = title  # <-- Add this line!
+            source.title = title
             def after_play(error):
                 if error:
                     print(f"Error playing {title}: {error}")
@@ -820,15 +825,20 @@ class Music(commands.Cog):
             voice_client.play(source, after=after_play)
         else:
             mode = self.loop_mode.get(guild_id, "off")
-            if mode == "song" and guild_id in self.last_played:
-                audio_url, title = self.last_played[guild_id]
-                SONG_QUEUES[guild_id] = deque([(audio_url, title)])
-                await self.play_next_song(voice_client, guild_id, channel)
-                return
+            # --- Fix: Always repeat the last played song in "song" mode ---
+            if mode == "song":
+                last = self.last_played.get(guild_id)
+                if last:
+                    audio_url, title = last
+                    SONG_QUEUES[guild_id] = deque([(audio_url, title)])
+                    await self.play_next_song(voice_client, guild_id, channel)
+                    return
             elif mode == "queue" and queue_snapshot:
                 SONG_QUEUES[guild_id] = deque(queue_snapshot)
                 await self.play_next_song(voice_client, guild_id, channel)
                 return
+            # Clear snapshot if not looping
+            self.queue_snapshots[guild_id] = []
             await asyncio.sleep(60)
             if not SONG_QUEUES[guild_id] and voice_client.is_connected():
                 await voice_client.disconnect()
@@ -1092,3 +1102,32 @@ class VolumeModal(discord.ui.Modal, title="Set Volume"):
             await interaction.response.send_message("Volume must be between 0 and 100.", ephemeral=True)
             return
         await self.cog.volume.callback(self.cog, interaction, value)
+
+    @commands.Cog.listener()
+    async def on_voice_state_update(self, member, before, after):
+        # Only care about users disconnecting from a voice channel
+        if before.channel and (after.channel != before.channel):
+            guild = before.channel.guild
+            voice_client = guild.voice_client
+            if not voice_client or not voice_client.is_connected():
+                return
+            # Check if the bot is in the same channel
+            if voice_client.channel == before.channel:
+                # Count non-bot members left in the channel
+                non_bot_members = [m for m in before.channel.members if not m.bot]
+                if len(non_bot_members) == 0:
+                    # Wait 30 seconds before disconnecting
+                    await asyncio.sleep(30)
+                    # Re-check after waiting
+                    channel = before.channel
+                    # Make sure the bot is still connected and in the same channel
+                    voice_client = guild.voice_client
+                    if not voice_client or not voice_client.is_connected():
+                        return
+                    if voice_client.channel != channel:
+                        return
+                    non_bot_members = [m for m in channel.members if not m.bot]
+                    if len(non_bot_members) == 0:
+                        if voice_client.is_playing() or voice_client.is_paused():
+                            voice_client.stop()
+                        await voice_client.disconnect()
