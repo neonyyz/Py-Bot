@@ -105,6 +105,10 @@ class MusicControlView(discord.ui.View):
     @discord.ui.button(label="⏯️", style=discord.ButtonStyle.gray, custom_id="music_resume", row=0)
     async def resume(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self.cog.resume.callback(self.cog, interaction)
+    
+    @discord.ui.button(label="⏹️", style=discord.ButtonStyle.gray, custom_id="music_stop", row=0)
+    async def stop(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.cog.stop.callback(self.cog, interaction)
 
     @discord.ui.button(label="⏭️", style=discord.ButtonStyle.gray, custom_id="music_skip", row=0)
     async def skip(self, interaction: discord.Interaction, button: discord.ui.Button):
