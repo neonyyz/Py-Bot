@@ -203,7 +203,6 @@ class Music(commands.Cog):
                 message = await channel.fetch_message(self.interface_message_id)
                 await message.edit(embed=embed, view=view)
             except (discord.NotFound, discord.Forbidden, discord.HTTPException):
-                # Message deleted or can't be edited, try to delete if exists, then create a new one
                 try:
                     old_message = await channel.fetch_message(self.interface_message_id)
                     await old_message.delete()
@@ -226,7 +225,6 @@ class Music(commands.Cog):
                 await asyncio.sleep(30)
         self.interface_task = asyncio.create_task(updater())
     
-    @app_commands.guilds(GUILD_ID)
     @app_commands.command(name="select_music_channel", description="Select the channel for the persistent music interface.")
     @app_commands.describe(channel="The channel to use for the music interface")
     async def select_music_channel(self, interaction: discord.Interaction, channel: discord.TextChannel):
@@ -811,7 +809,7 @@ class Music(commands.Cog):
             }
             volume = GUILD_VOLUMES.get(guild_id, 0.5)
             source = discord.PCMVolumeTransformer(
-                discord.FFmpegPCMAudio(audio_url, **ffmpeg_options, executable="bin\\ffmpeg\\ffmpeg.exe"),
+                discord.FFmpegPCMAudio(audio_url, **ffmpeg_options, executable="ffmpeg"),
                 volume=volume
             )
             source.title = title  # <-- Add this line!

@@ -17,8 +17,13 @@ async def on_ready():
     print(f'Logged in as {bot.user} (ID: {bot.user.id})')
     print('------')
     try:
-        synced = await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
-        print(f"Synced {len(synced)} commands to the test guild.")
+        # Register all commands globally
+        synced = await bot.tree.sync()
+        print(f"Synced {len(synced)} commands globally.")
+        # Optionally, also sync to test guild for instant updates
+        test_guild = discord.Object(id=GUILD_ID)
+        test_synced = await bot.tree.sync(guild=test_guild)
+        print(f"Synced {len(test_synced)} commands to the test guild.")
     except Exception as e:
         print(f"Failed to sync commands: {e}")
     
